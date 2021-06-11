@@ -35,7 +35,7 @@ def get_args_parser():
 
     # Dataloaders parameters
     parser.add_argument('--num_workers', default=32, type=int, help='number of data loading workers (default: 16)')
-    parser.add_argument('--batch-size', default=256, type=int, help='mini-batch size (default: 256)')
+    parser.add_argument('--batch_size', default=256, type=int, help='mini-batch size (default: 256)')
     parser.add_argument('--degrees', default=0, type=int, help='max degree in data-augmentation rotation (default: 0)')
 
     # Model parameters
@@ -44,18 +44,19 @@ def get_args_parser():
 
     # Optimization parameters
     parser.add_argument('--epochs', default=90, type=int)
-    parser.add_argument('--start-epoch', default=0, type=int)
-    parser.add_argument('--lr', '--learning-rate', default=0.1, type=float, help='initial learning rate', dest='lr')
+    parser.add_argument('--start_epoch', default=0, type=int)
+    parser.add_argument('--lr', '--learning_rate', default=0.1, type=float, help='initial learning rate', dest='lr')
     parser.add_argument('--momentum', default=0.9, type=float)
-    parser.add_argument('--wd', '--weight-decay', default=1e-4, type=float, dest='weight_decay')
-    parser.add_argument('--print-freq', default=10, type=int)
+    parser.add_argument('--wd', '--weight_decay', default=1e-4, type=float, dest='weight_decay')
+    parser.add_argument('--print_freq', default=10, type=int)
     parser.add_argument('--resume', default='', type=str)
     parser.add_argument('--evaluate', dest='evaluate', action='store_true')
 
     # Distributed training parameters
-    parser.add_argument('--world-size', default=-1, type=int, help='number of nodes for distributed training')
-    parser.add_argument('--dist-url', default='env://', type=str, help='url used to set up distributed training')
-    parser.add_argument('--dist-eval', action='store_true', default=False, help='Enabling distributed evaluation')
+    parser.add_argument('--debug_slurm', dest='evaluate', action='store_true')
+    # parser.add_argument('--world-size', default=-1, type=int, help='number of nodes for distributed training')
+    # parser.add_argument('--dist-url', default='env://', type=str, help='url used to set up distributed training')
+    # parser.add_argument('--dist-eval', action='store_true', default=False, help='Enabling distributed evaluation')
 
     return parser
 

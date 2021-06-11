@@ -8,6 +8,7 @@ import io
 import os
 import time
 import subprocess
+import socket
 from collections import defaultdict, deque
 import datetime
 from logging import getLogger
@@ -348,7 +349,7 @@ def init_distributed_mode(params):
     # define whether this is the master process / if we are in distributed mode
     params.is_master = params.node_id == 0 and params.local_rank == 0
     params.multi_node = params.n_nodes > 1
-    params.multi_gpu = params.world_size > 1
+    params.distributed = params.world_size > 1
 
     # summary
     PREFIX = "%i - " % params.global_rank
@@ -360,14 +361,14 @@ def init_distributed_mode(params):
     logger.info(PREFIX + "GPUs per node  : %i" % params.n_gpu_per_node)
     logger.info(PREFIX + "Master         : %s" % str(params.is_master))
     logger.info(PREFIX + "Multi-node     : %s" % str(params.multi_node))
-    logger.info(PREFIX + "Multi-GPU      : %s" % str(params.multi_gpu))
+    logger.info(PREFIX + "Multi-GPU      : %s" % str(params.distributed))
     logger.info(PREFIX + "Hostname       : %s" % socket.gethostname())
 
     # set GPU device
     torch.cuda.set_device(params.local_rank)
 
     # initialize multi-GPU
-    if params.multi_gpu:
+    if params.distributed:
 
         # http://pytorch.apachecn.org/en/0.3.0/distributed.html#environment-variable-initialization
         # 'env://' will read these environment variables:
