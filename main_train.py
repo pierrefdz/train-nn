@@ -56,9 +56,9 @@ def get_args_parser():
     parser.add_argument('--debug_slurm', action='store_true')
     parser.add_argument('--local_rank', default=-1, type=int)
     parser.add_argument('--master_port', default=-1, type=int)
+    parser.add_argument('--dist-eval', action='store_true', default=False, help='Enabling distributed evaluation')
     # parser.add_argument('--world-size', default=-1, type=int, help='number of nodes for distributed training')
     # parser.add_argument('--dist-url', default='env://', type=str, help='url used to set up distributed training')
-    # parser.add_argument('--dist-eval', action='store_true', default=False, help='Enabling distributed evaluation')
 
     return parser
 
