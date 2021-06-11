@@ -203,6 +203,7 @@ def main(args):
 
 def train(train_loader, model, criterion, optimizer, epoch, args):
     batch_time = utils.AverageMeter('Time', ':6.3f')
+    img_time = utils.AverageMeter('Imgs/s', ':6.3f')
     data_time = utils.AverageMeter('Data', ':6.3f')
     losses = utils.AverageMeter('Loss', ':.4e')
     top1 = utils.AverageMeter('Acc@1', ':6.2f')
@@ -242,6 +243,7 @@ def train(train_loader, model, criterion, optimizer, epoch, args):
 
         # measure elapsed time
         batch_time.update(time.time() - end)
+        img_time.update(images.size(0)/(time.time() - end))
         end = time.time()
 
         if i % args.print_freq == 0:
@@ -250,6 +252,7 @@ def train(train_loader, model, criterion, optimizer, epoch, args):
 
 def validate(val_loader, model, criterion, args):
     batch_time = utils.AverageMeter('Time', ':6.3f')
+    img_time = utils.AverageMeter('Imgs/s', ':6.3f')
     losses = utils.AverageMeter('Loss', ':.4e')
     top1 = utils.AverageMeter('Acc@1', ':6.2f')
     top5 = utils.AverageMeter('Acc@5', ':6.2f')
@@ -281,6 +284,7 @@ def validate(val_loader, model, criterion, args):
 
             # measure elapsed time
             batch_time.update(time.time() - end)
+            img_time.update(images.size(0)/(time.time() - end))
             end = time.time()
 
             if i % args.print_freq == 0:
