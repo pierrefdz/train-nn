@@ -34,7 +34,7 @@ def get_args_parser():
     parser.add_argument('--seed', default=0, type=int)
 
     # Dataloaders parameters
-    parser.add_argument('--num_workers', default=16, type=int, help='number of data loading workers (default: 16)')
+    parser.add_argument('--num_workers', default=8, type=int, help='number of data loading workers (default: 16)')
     parser.add_argument('--batch_size', default=256, type=int, help='mini-batch size (default: 256)')
     parser.add_argument('--degrees', default=0, type=int, help='max degree in data-augmentation rotation (default: 0)')
 
@@ -191,7 +191,7 @@ def main(args):
         is_best = acc1 > best_acc1
         best_acc1 = max(acc1, best_acc1)
 
-        if not args.distributed or (args.distributed and args.rank == 0):
+        if not args.distributed or (args.distributed and args.global_rank == 0):
             save_checkpoint({
                 'epoch': epoch + 1,
                 'arch': args.arch,
