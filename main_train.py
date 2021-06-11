@@ -1,13 +1,12 @@
 import argparse
 import os
-import random
 import shutil
 import time
-import warnings
-import json
-import submitit
-
+# import json
+# import submitit
 import numpy as np
+
+from pathlib import Path
 
 import torch
 import torch.backends.cudnn as cudnn
@@ -143,8 +142,8 @@ def main(args):
     print('number of params:', n_parameters)
 
     criterion = torch.nn.CrossEntropyLoss()
-    optimizer = torch.optim.Adam(model.parameters(), args.lr)
-    # optimizer = torch.optim.SGD(model.parameters(), args.lr, momentum=args.momentum, weight_decay=args.weight_decay)
+    # optimizer = torch.optim.Adam(model.parameters(), args.lr)
+    optimizer = torch.optim.SGD(model.parameters(), args.lr, momentum=args.momentum, weight_decay=args.weight_decay)
 
     # optionally resume from a checkpoint
     if args.resume:
