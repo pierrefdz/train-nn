@@ -145,8 +145,11 @@ def main(args):
     print('number of params:', n_parameters)
 
     criterion = torch.nn.CrossEntropyLoss()
+
+    linear_scaled_lr = args.lr * args.batch_size * utils.get_world_size() / 512.0
+    args.lr = linear_scaled_lr
     # optimizer = torch.optim.Adam(model.parameters(), args.lr)
-    optimizer = torch.optim.SGD(model.parameters(), args.lr, momentum=args.momentum, weight_decay=args.weight_decay)
+    optimizer = torch.optim.SGD(model_without_ddp.parameters(), args.lr, momentum=args.momentum, weight_decay=args.weight_decay)
 
     # optionally resume from a checkpoint
     if args.resume:
