@@ -97,6 +97,7 @@ def main(args):
         transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
     ])
     dataset_val = datasets.ImageFolder(dir_val, transform_val)
+    print("=> data successfully loaded from '{}'".format(args.data_dir))
 
     if args.distributed:
         num_tasks = utils.get_world_size()
@@ -213,7 +214,7 @@ def train(train_loader, model, criterion, optimizer, epoch, args):
     top5 = utils.AverageMeter('Acc@5', ':6.2f')
     progress = utils.ProgressMeter(
         len(train_loader),
-        [batch_time, data_time, losses, top1, top5],
+        [batch_time, img_time, data_time, losses, top1, top5],
         prefix="Epoch: [{}]".format(epoch))
 
     # switch to train mode
@@ -261,7 +262,7 @@ def validate(val_loader, model, criterion, args):
     top5 = utils.AverageMeter('Acc@5', ':6.2f')
     progress = utils.ProgressMeter(
         len(val_loader),
-        [batch_time, losses, top1, top5],
+        [batch_time, img_time, losses, top1, top5],
         prefix='Test: ')
 
     # switch to evaluate mode
