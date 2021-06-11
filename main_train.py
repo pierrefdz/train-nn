@@ -53,7 +53,7 @@ def get_args_parser():
     parser.add_argument('--evaluate', dest='evaluate', action='store_true')
 
     # Distributed training parameters
-    parser.add_argument('--debug_slurm', dest='evaluate', action='store_true')
+    parser.add_argument('--debug_slurm', action='store_true')
     # parser.add_argument('--world-size', default=-1, type=int, help='number of nodes for distributed training')
     # parser.add_argument('--dist-url', default='env://', type=str, help='url used to set up distributed training')
     # parser.add_argument('--dist-eval', action='store_true', default=False, help='Enabling distributed evaluation')
@@ -137,7 +137,7 @@ def main(args):
     model.to(device)
 
     if args.distributed:
-        model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[args.gpu])
+        model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[args.local_rank])
         model_without_ddp = model.module
     n_parameters = sum(p.numel() for p in model.parameters() if p.requires_grad)
     print('number of params:', n_parameters)
@@ -150,17 +150,17 @@ def main(args):
     if args.resume:
         if os.path.isfile(args.resume):
             print("=> loading checkpoint '{}'".format(args.resume))
-            if args.gpu is None:
+            if args.local_rank is None:
                 checkpoint = torch.load(args.resume)
             else:
                 # Map model to be loaded to specified single gpu.
-                loc = 'cuda:{}'.format(args.gpu)
+                loc = 'cuda:{}'.format(args.local_rank)
                 checkpoint = torch.load(args.resume, map_location=loc)
             args.start_epoch = checkpoint['epoch']
             best_acc1 = checkpoint['best_acc1']
-            if args.gpu is not None:
+            if args.local_rank is not None:
                 # best_acc1 may be from a checkpoint from a different GPU
-                best_acc1 = best_acc1.to(args.gpu)
+                best_acc1 = best_acc1.to(args.local_rank)
             model.load_state_dict(checkpoint['state_dict'])
             optimizer.load_state_dict(checkpoint['optimizer'])
             print("=> loaded checkpoint '{}' (epoch {})"
@@ -218,10 +218,10 @@ def train(train_loader, model, criterion, optimizer, epoch, args):
         # measure data loading time
         data_time.update(time.time() - end)
 
-        if args.gpu is not None:
-            images = images.cuda(args.gpu, non_blocking=True)
+        if args.local_rank is not None:
+            images = images.cuda(args.local_rank, non_blocking=True)
         if torch.cuda.is_available():
-            target = target.cuda(args.gpu, non_blocking=True)
+            target = target.cuda(args.local_rank, non_blocking=True)
 
         # compute output
         output = model(images)
@@ -262,10 +262,10 @@ def validate(val_loader, model, criterion, args):
     with torch.no_grad():
         end = time.time()
         for i, (images, target) in enumerate(val_loader):
-            if args.gpu is not None:
-                images = images.cuda(args.gpu, non_blocking=True)
+            if args.local_rank is not None:
+                images = images.cuda(args.local_rank, non_blocking=True)
             if torch.cuda.is_available():
-                target = target.cuda(args.gpu, non_blocking=True)
+                target = target.cuda(args.local_rank, non_blocking=True)
 
             # compute output
             output = model(images)
