@@ -39,7 +39,7 @@ def get_args_parser():
     parser.add_argument('--degrees', default=0, type=int, help='max degree in data-augmentation rotation (default: 0)')
 
     # Model parameters
-    parser.add_argument('--arch', default='resnet18', choices=['resnet18'])
+    parser.add_argument('--arch', default='resnet18', choices=['resnet18', "resnet50"])
     parser.add_argument('--pretrained', dest='pretrained', action='store_true')
 
     # Optimization parameters
