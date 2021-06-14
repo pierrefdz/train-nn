@@ -43,7 +43,7 @@ def get_args_parser():
     parser.add_argument('--pretrained', dest='pretrained', action='store_true')
 
     # Optimization parameters
-    parser.add_argument('--epochs', default=90, type=int)
+    parser.add_argument('--epochs', default=100, type=int)
     parser.add_argument('--start_epoch', default=0, type=int)
     parser.add_argument('--lr', '--learning_rate', default=0.1, type=float, help='initial learning rate', dest='lr')
     parser.add_argument('--momentum', default=0.9, type=float)
@@ -149,9 +149,10 @@ def main(args):
 
     linear_scaled_lr = args.lr * args.batch_size * utils.get_world_size() / 512.0
     args.lr = linear_scaled_lr
-    # optimizer = torch.optim.Adam(model.parameters(), args.lr)
-    optimizer = torch.optim.SGD(model_without_ddp.parameters(), args.lr, momentum=args.momentum, weight_decay=args.weight_decay)
+    # optimizer = torch.optim.Adam(model_without_ddp.parameters(), args.lr)
+    optimizer = torch.optim.SGD(model.parameters(), args.lr, momentum=args.momentum, weight_decay=args.weight_decay)
 
+    best_acc1 = 0.0
     # optionally resume from a checkpoint
     if args.resume:
         if os.path.isfile(args.resume):
@@ -178,7 +179,6 @@ def main(args):
         validate(val_loader, model, criterion, args)
         return
 
-    best_acc1 = 0.0
     for epoch in range(args.start_epoch, args.epochs):
         if args.distributed:
             train_loader.sampler.set_epoch(epoch)
@@ -199,7 +199,7 @@ def main(args):
             save_checkpoint({
                 'epoch': epoch + 1,
                 'arch': args.arch,
-                'state_dict': model.state_dict(),
+                'state_dict': model.module.state_dict() if args.distributed else model.state_dict(),
                 'best_acc1': best_acc1,
                 'optimizer' : optimizer.state_dict(),
             }, is_best, filename=os.path.join(args.output_dir, 'checkpoint.pth.tar'))
@@ -304,7 +304,7 @@ def validate(val_loader, model, criterion, args):
 def save_checkpoint(state, is_best, filename='checkpoint.pth.tar'):
     torch.save(state, filename)
     if is_best:
-        shutil.copyfile(filename, 'model_best.pth.tar')
+        shutil.copyfile(filename, os.path.join(args.output_dir, 'model_best.pth.tar'))
 
 
 def adjust_learning_rate(optimizer, epoch, args):
