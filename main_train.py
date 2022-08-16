@@ -1,4 +1,5 @@
 import argparse
+import json
 import os
 import shutil
 import time
@@ -187,44 +188,33 @@ def main(args):
         adjust_learning_rate(optimizer, epoch, args)
 
         # train for one epoch
-        train(train_loader, model, criterion, optimizer, epoch, args)
-
-        # evaluate on validation set
-        acc1 = validate(val_loader, model, criterion, args)
-
-        # remember best acc@1 and save checkpoint
-        is_best = acc1 > best_acc1
-        best_acc1 = max(acc1, best_acc1)
+        train_stats = train(train_loader, model, criterion, optimizer, epoch, args)
+        val_stats = validate(val_loader, model, criterion, args)
+        log_stats = {
+                **{f'train_{k}': v for k, v in train_stats.items()},
+                **{f'val_{k}': v for k, v in val_stats.items()},
+                'epoch': epoch
+            }
 
         if not args.distributed or (args.distributed and args.global_rank == 0):
             save_checkpoint({
                 'epoch': epoch + 1,
                 'arch': args.arch,
                 'state_dict': model.module.state_dict() if args.distributed else model.state_dict(),
-                'best_acc1': best_acc1,
                 'optimizer' : optimizer.state_dict(),
-            }, is_best, filename=os.path.join(args.output_dir, 'checkpoint.pth.tar'))
+            }, filename=os.path.join(args.output_dir, 'checkpoint.pth'))
+            with (Path(args.output_dir) / "log.txt").open("a") as f:
+                f.write(json.dumps(log_stats) + "\n")
 
 
 def train(train_loader, model, criterion, optimizer, epoch, args):
-    batch_time = utils.AverageMeter('Time', ':6.3f')
-    img_time = utils.AverageMeter('Imgs/s', ':6.3f')
-    data_time = utils.AverageMeter('Data', ':6.3f')
-    losses = utils.AverageMeter('Loss', ':.4e')
-    top1 = utils.AverageMeter('Acc@1', ':6.2f')
-    top5 = utils.AverageMeter('Acc@5', ':6.2f')
-    progress = utils.ProgressMeter(
-        len(train_loader),
-        [batch_time, img_time, data_time, losses, top1, top5],
-        prefix="Epoch: [{}]".format(epoch))
+
+    metric_logger = utils.MetricLogger(delimiter="  ")
 
     # switch to train mode
     model.train()
 
-    end = time.time()
     for i, (images, target) in enumerate(train_loader):
-        # measure data loading time
-        data_time.update(time.time() - end)
 
         if args.local_rank is not None:
             images = images.cuda(args.local_rank, non_blocking=True)
@@ -237,69 +227,62 @@ def train(train_loader, model, criterion, optimizer, epoch, args):
 
         # measure accuracy and record loss
         acc1, acc5 = accuracy(output, target, topk=(1, 5))
-        losses.update(loss.item(), images.size(0))
-        top1.update(acc1[0], images.size(0))
-        top5.update(acc5[0], images.size(0))
 
         # compute gradient and do SGD step
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
 
-        # measure elapsed time
-        batch_time.update(time.time() - end)
-        img_time.update(images.size(0)/(time.time() - end))
-        end = time.time()
+        log_stats = {
+            'loss': loss.item(),
+            'acc1': acc1[0],
+            'acc5': acc5[0],
+        }
+                
+        torch.cuda.synchronize()
+        for name, loss in log_stats.items():
+            metric_logger.update(**{name:loss})
+    
+    metric_logger.synchronize_between_processes()
+    print("Averaged {} stats:".format('train'), metric_logger)
+    return {k: meter.global_avg for k, meter in metric_logger.meters.items()}
 
-        if i % args.print_freq == 0:
-            progress.display(i)
 
-
+@torch.no_grad()
 def validate(val_loader, model, criterion, args):
-    batch_time = utils.AverageMeter('Time', ':6.3f')
-    img_time = utils.AverageMeter('Imgs/s', ':6.3f')
-    losses = utils.AverageMeter('Loss', ':.4e')
-    top1 = utils.AverageMeter('Acc@1', ':6.2f')
-    top5 = utils.AverageMeter('Acc@5', ':6.2f')
-    progress = utils.ProgressMeter(
-        len(val_loader),
-        [batch_time, img_time, losses, top1, top5],
-        prefix='Test: ')
 
-    # switch to evaluate mode
-    model.eval()
+    metric_logger = utils.MetricLogger(delimiter="  ")
 
-    with torch.no_grad():
-        end = time.time()
-        for i, (images, target) in enumerate(val_loader):
-            if args.local_rank is not None:
-                images = images.cuda(args.local_rank, non_blocking=True)
-            if torch.cuda.is_available():
-                target = target.cuda(args.local_rank, non_blocking=True)
+    # switch to train mode
+    model.train()
 
-            # compute output
-            output = model(images)
-            loss = criterion(output, target)
+    for i, (images, target) in enumerate(val_loader):
 
-            # measure accuracy and record loss
-            acc1, acc5 = accuracy(output, target, topk=(1, 5))
-            losses.update(loss.item(), images.size(0))
-            top1.update(acc1[0], images.size(0))
-            top5.update(acc5[0], images.size(0))
+        if args.local_rank is not None:
+            images = images.cuda(args.local_rank, non_blocking=True)
+        if torch.cuda.is_available():
+            target = target.cuda(args.local_rank, non_blocking=True)
 
-            # measure elapsed time
-            batch_time.update(time.time() - end)
-            img_time.update(images.size(0)/(time.time() - end))
-            end = time.time()
+        # compute output
+        output = model(images)
+        loss = criterion(output, target)
 
-            if i % args.print_freq == 0:
-                progress.display(i)
+        # measure accuracy and record loss
+        acc1, acc5 = accuracy(output, target, topk=(1, 5))
 
-        # TODO: this should also be done with the ProgressMeter
-        print(' * Acc@1 {top1.avg:.3f} Acc@5 {top5.avg:.3f}'
-              .format(top1=top1, top5=top5))
-
-    return top1.avg
+        log_stats = {
+            'loss': loss.item(),
+            'acc1': acc1[0],
+            'acc5': acc5[0],
+        }
+                
+        torch.cuda.synchronize()
+        for name, loss in log_stats.items():
+            metric_logger.update(**{name:loss})
+    
+    metric_logger.synchronize_between_processes()
+    print("Averaged {} stats:".format('val'), metric_logger)
+    return {k: meter.global_avg for k, meter in metric_logger.meters.items()}
 
 
 def save_checkpoint(state, is_best, filename='checkpoint.pth.tar'):
