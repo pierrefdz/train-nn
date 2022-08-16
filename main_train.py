@@ -28,6 +28,7 @@ def get_args_parser():
 
     # Path parameters
     parser.add_argument('--data_dir', type=str, help='path to dataset')
+    parser.add_argument('--train_data_dir', type=str, help='path to train dataset')
     parser.add_argument('--output_dir', type=str, default="")
 
     # Misc parameters
@@ -79,7 +80,7 @@ def main(args):
 
     # Data loading code
     print("=> loading data from '{}'".format(args.data_dir))
-    dir_train = os.path.join(args.data_dir, 'train')
+    dir_train = os.path.join(args.data_dir, 'train') if args.train_data_dir is None else args.train_data_dir
     transform_train = transforms.Compose([
         transforms.RandomRotation(args.degrees),
         transforms.RandomResizedCrop(224),
