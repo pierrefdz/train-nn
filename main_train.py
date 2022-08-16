@@ -196,13 +196,15 @@ def main(args):
                 'epoch': epoch
             }
 
-        if not args.distributed or (args.distributed and args.global_rank == 0):
-            save_checkpoint({
+        state_dict = {
                 'epoch': epoch + 1,
                 'arch': args.arch,
                 'state_dict': model.module.state_dict() if args.distributed else model.state_dict(),
                 'optimizer' : optimizer.state_dict(),
-            }, filename=os.path.join(args.output_dir, 'checkpoint.pth'))
+            }
+
+        if not args.distributed or (args.distributed and args.global_rank == 0):
+            torch.save(state_dict, os.path.join(args.output_dir, 'checkpoint.pth'))
             with (Path(args.output_dir) / "log.txt").open("a") as f:
                 f.write(json.dumps(log_stats) + "\n")
 
@@ -283,12 +285,6 @@ def validate(val_loader, model, criterion, args):
     metric_logger.synchronize_between_processes()
     print("Averaged {} stats:".format('val'), metric_logger)
     return {k: meter.global_avg for k, meter in metric_logger.meters.items()}
-
-
-def save_checkpoint(state, is_best, filename='checkpoint.pth.tar'):
-    torch.save(state, filename)
-    if is_best:
-        shutil.copyfile(filename, os.path.join(args.output_dir, 'model_best.pth.tar'))
 
 
 def adjust_learning_rate(optimizer, epoch, args):
