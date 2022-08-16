@@ -336,9 +336,6 @@ def init_distributed_mode(params):
     logger.info(PREFIX + "Multi-GPU      : %s" % str(params.distributed))
     logger.info(PREFIX + "Hostname       : %s" % socket.gethostname())
 
-    # set GPU device
-    torch.cuda.set_device(params.local_rank)
-
     # initialize multi-GPU
     if params.distributed:
 
@@ -354,6 +351,11 @@ def init_distributed_mode(params):
             init_method='env://',
             backend='nccl',
         )
+
+    # set GPU device
+    torch.cuda.set_device(params.local_rank)
+    dist.barrier()
+    setup_for_distributed(params.is_master)
 
 
 # def init_distributed_mode(args):
