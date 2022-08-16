@@ -189,7 +189,7 @@ def main(args):
 
         # train for one epoch
         train_stats = train(train_loader, model, criterion, optimizer, epoch, args)
-        val_stats = validate(val_loader, model, criterion, args)
+        val_stats = validate(val_loader, model, criterion, epoch, args)
         log_stats = {
                 **{f'train_{k}': v for k, v in train_stats.items()},
                 **{f'val_{k}': v for k, v in val_stats.items()},
@@ -211,12 +211,13 @@ def main(args):
 
 def train(train_loader, model, criterion, optimizer, epoch, args):
 
+    header = 'Train - Epoch: [{}/{}]'.format(epoch, args.epochs)
     metric_logger = utils.MetricLogger(delimiter="  ")
 
     # switch to train mode
     model.train()
 
-    for i, (images, target) in enumerate(train_loader):
+    for i, (images, target) in enumerate(metric_logger.log_every(train_loader, 10, header)):
 
         if args.local_rank is not None:
             images = images.cuda(args.local_rank, non_blocking=True)
@@ -251,14 +252,15 @@ def train(train_loader, model, criterion, optimizer, epoch, args):
 
 
 @torch.no_grad()
-def validate(val_loader, model, criterion, args):
+def validate(val_loader, model, criterion, epoch, args):
 
+    header = 'Val - Epoch: [{}/{}]'.format(epoch, args.epochs)
     metric_logger = utils.MetricLogger(delimiter="  ")
 
-    # switch to train mode
-    model.train()
+    # switch to val mode
+    model.eval()
 
-    for i, (images, target) in enumerate(val_loader):
+    for i, (images, target) in enumerate(metric_logger.log_every(val_loader, 10, header)):
 
         if args.local_rank is not None:
             images = images.cuda(args.local_rank, non_blocking=True)
